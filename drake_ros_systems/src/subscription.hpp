@@ -65,7 +65,7 @@ protected:
   void
   handle_serialized_message(
     const std::shared_ptr<rclcpp::SerializedMessage> & message,
-    const rclcpp::MessageInfo & message_info) override;
+    const rclcpp::MessageInfo & message_info);
 
   /// Return the message borrowed in create_message.
   /** \param[in] message Shared pointer to the returned message. */

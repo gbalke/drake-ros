@@ -202,7 +202,7 @@ class ContactResultMaker final : public LeafSystem<double> {
   explicit ContactResultMaker(bool use_strict_hydro = true)
       : use_strict_hydro_{use_strict_hydro} {
     geometry_query_input_port_ =
-        this->DeclareAbstractInputPort("query_object",
+        this->DeclareAbstractInputPort("contact_query",
                                        Value<QueryObject<double>>())
             .get_index();
     contact_result_output_port_ =
@@ -373,11 +373,6 @@ int do_main() {
   auto& rviz_visualizer = *builder.AddSystem<RvizVisualizer>(
     ros_interface_system->get_ros_interface());
 
-  // Make and visualize contacts.
-  auto& contact_results = *builder.AddSystem<ContactResultMaker>(!FLAGS_hybrid);
-  builder.Connect(scene_graph.get_query_output_port(),
-                  contact_results.get_geometry_query_port());
-
   builder.Connect(scene_graph.get_query_output_port(),
     rviz_visualizer.get_graph_query_port());
 
@@ -388,6 +383,10 @@ int do_main() {
   DrakeVisualizerd::AddToBuilder(&builder, scene_graph, &lcm);
 
   // Visualize contacts in Drake Visualizer.
+  auto& contact_results = *builder.AddSystem<ContactResultMaker>(!FLAGS_hybrid);
+  builder.Connect(scene_graph.get_query_output_port(),
+                  contact_results.get_geometry_query_port());
+
   auto& contact_to_lcm =
       *builder.AddSystem(LcmPublisherSystem::Make<lcmt_contact_results_for_viz>(
           "CONTACT_RESULTS", &lcm, 1.0 / 60));
@@ -398,7 +397,6 @@ int do_main() {
   systems::Simulator<double> simulator(*diagram);
 
   auto & simulator_context = simulator.get_mutable_context();
-
 
   simulator.get_mutable_integrator().set_maximum_step_size(0.002);
   simulator.set_target_realtime_rate(FLAGS_real_time ? 1.f : 0.f);

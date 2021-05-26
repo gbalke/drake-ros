@@ -27,6 +27,7 @@
 #include <rclcpp/time.hpp>
 
 #include <builtin_interfaces/msg/time.hpp>
+#include <tf2_eigen/tf2_eigen.h>
 #include <geometry_msgs/msg/point_stamped.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
@@ -48,26 +49,6 @@ namespace drake_ros_systems
 
 namespace
 {
-
-geometry_msgs::msg::Point ToPoint(const Eigen::Vector3d& point)
-{
-  geometry_msgs::msg::Point geom_point;
-  geom_point.x = point.x();
-  geom_point.y = point.y();
-  geom_point.z = point.z();
-  return geom_point;
-}
-
-/*
-geometry_msgs::msg::Vector3 ToScale(const Eigen::Vector3d& vector)
-{
-  geometry_msgs::msg::Vector3 geom_vector;
-  geom_vector.x = vector.x();
-  geom_vector.y = vector.y();
-  geom_vector.z = vector.z();
-  return geom_vector;
-}
-*/
 
 class ContactGeometryToMarkers : public drake::geometry::ShapeReifier
 {
@@ -132,14 +113,14 @@ public:
       edge_msg.id = 1;
       // Set the size of the individual markers (depends on scale)
       //edge_msg.scale = ToScale(edge_scale * scale);
-      edge_msg.scale.x = 0.02;
-      edge_msg.scale.y = 0.02;
+      edge_msg.scale.x = 0.01;
+      edge_msg.scale.y = 0.01;
       edge_msg.scale.z = 1.0;
 
-      // Set the overall color
-      edge_msg.color.r = 0.0;
-      edge_msg.color.g = 0.0;
-      edge_msg.color.b = 0.0;
+      // Set the edge color
+      edge_msg.color.r = 1.0;
+      edge_msg.color.g = 1.0;
+      edge_msg.color.b = 1.0;
       edge_msg.color.a = 1.0;
 
       // Generate the surface markers for each mesh.
@@ -151,9 +132,9 @@ public:
         const drake::geometry::SurfaceVertex<double>& vB = mesh_W.vertex(face.vertex(1));
         const drake::geometry::SurfaceVertex<double>& vC = mesh_W.vertex(face.vertex(2));
 
-        face_msg.points.at(index + 0) = ToPoint(vA.r_MV());
-        face_msg.points.at(index + 1) = ToPoint(vB.r_MV());
-        face_msg.points.at(index + 2) = ToPoint(vC.r_MV());
+        face_msg.points.at(index + 0) = tf2::toMsg(vA.r_MV());
+        face_msg.points.at(index + 1) = tf2::toMsg(vB.r_MV());
+        face_msg.points.at(index + 2) = tf2::toMsg(vC.r_MV());
         index += 3;
 
         /*
@@ -172,14 +153,14 @@ public:
         */
 
         // 0->1
-        edge_msg.points.push_back(ToPoint(vA.r_MV()));
-        edge_msg.points.push_back(ToPoint(vB.r_MV()));
+        edge_msg.points.push_back(tf2::toMsg(vA.r_MV()));
+        edge_msg.points.push_back(tf2::toMsg(vB.r_MV()));
         // 1->2
-        edge_msg.points.push_back(ToPoint(vB.r_MV()));
-        edge_msg.points.push_back(ToPoint(vC.r_MV()));
+        edge_msg.points.push_back(tf2::toMsg(vB.r_MV()));
+        edge_msg.points.push_back(tf2::toMsg(vC.r_MV()));
         // 2->0
-        edge_msg.points.push_back(ToPoint(vC.r_MV()));
-        edge_msg.points.push_back(ToPoint(vA.r_MV()));
+        edge_msg.points.push_back(tf2::toMsg(vC.r_MV()));
+        edge_msg.points.push_back(tf2::toMsg(vA.r_MV()));
       }
 
       marker_array_->markers.push_back(face_msg);

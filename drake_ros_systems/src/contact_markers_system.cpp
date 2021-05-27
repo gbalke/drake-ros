@@ -63,6 +63,20 @@ double calc_uv(double pressure, double min_pressure, double max_pressure) {
   return clip(u, 0.0, 1.0);
 }
 
+void create_color(double value, double & red, double & green, double & blue) {
+  red = clip(((value - 0.25) * 4.0), 0.0, 1.0);
+  green = clip(((value - 0.5) * 4.0), 0.0, 1.0);
+  if (value < 0.25) {
+    blue = clip(value * 4.0, 0.0, 1.0);
+  }
+  else if (value > 0.75) {
+    blue = clip((value - 0.75) * 4.0, 0.0, 1.0);
+  }
+  else {
+    blue = clip(1.0 - (value - 0.25) * 4.0, 0.0, 1.0);
+  }
+}
+
 class ContactGeometryToMarkers : public drake::geometry::ShapeReifier
 {
 public:
@@ -177,23 +191,16 @@ public:
       for (size_t tri_index = 0; tri_index < (size_t)mesh_W.num_faces(); tri_index++) {
         for (size_t vert_index = 0; vert_index < 3; vert_index++) {
           size_t arr_index = (tri_index * 3) + vert_index;
-          double norm_data = calc_uv(pressures(arr_index), 0.0, pressures.maxCoeff());
-          std::cout << vert_index << ": " << norm_data << ", ";
-          face_msg.colors.at(arr_index).r = clip(((norm_data - 0.25) * 4.0), 0.0, 1.0);
-          face_msg.colors.at(arr_index).g = clip(((norm_data - 0.5) * 4.0), 0.0, 1.0);
-          if (norm_data < 0.25) {
-            face_msg.colors.at(arr_index).b = clip(norm_data * 4.0, 0.0, 1.0);
-          }
-          else if (norm_data > 0.75) {
-            face_msg.colors.at(arr_index).b = clip((norm_data - 0.75) * 4.0, 0.0, 1.0);
-          }
-          else {
-            face_msg.colors.at(arr_index).b = clip(1.0 - (norm_data - 0.25) * 4.0, 0.0, 1.0);
-          }
+          double norm_data = calc_uv(
+              pressures(arr_index), 0.0, pressures.maxCoeff());
 
-          face_msg.colors.at(arr_index).a = 1.0f;
+          double red, green, blue;
+          create_color(norm_data, red, green, blue);
+          face_msg.colors.at(arr_index).r = red;
+          face_msg.colors.at(arr_index).g = green;
+          face_msg.colors.at(arr_index).b = blue;
+          face_msg.colors.at(arr_index).a = 1.0;
         }
-        std::cout << std::endl;
       }
 
 

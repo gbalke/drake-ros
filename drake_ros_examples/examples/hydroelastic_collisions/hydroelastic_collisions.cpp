@@ -342,7 +342,7 @@ int do_main() {
   scene_graph.AssignRole(source_id, ground_id, rigid_props);
   IllustrationProperties illustration_box;
   illustration_box.AddProperty("phong", "diffuse",
-                               Vector4d{0.5, 0.5, 0.45, 1.0});
+                               Vector4d{0.5, 0.5, 0.45, 0.5});
   scene_graph.AssignRole(source_id, ground_id, illustration_box);
 
   // Add two cylinders to bang into -- if the rigid_cylinders flag is set to

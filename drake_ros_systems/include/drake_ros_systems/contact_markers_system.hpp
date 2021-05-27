@@ -51,7 +51,7 @@ struct ContactMarkersParams
   std::string origin_frame_name{"world"};
 
   /// Default marker color if no ("phong", "diffuse") property is found.
-  drake::geometry::Rgba default_color{1.0, 1.0, 1.0, 0.5};
+  drake::geometry::Rgba default_color{0.6, 1.0, 0.6, 1.0};
 
   /// Use strict hydroelastic collisions.
   bool use_strict_hydro_{true};

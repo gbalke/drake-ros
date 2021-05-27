@@ -34,8 +34,11 @@
 #include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
+#include <Eigen/Core>
+
 #include <unordered_set>
 #include <utility>
+#include <cmath>
 
 #include <iostream>
 
@@ -49,6 +52,16 @@ namespace drake_ros_systems
 
 namespace
 {
+
+template <typename T>
+T clip(const T& n, const T& lower, const T& upper) {
+  return std::max(lower, std::min(n, upper));
+}
+
+double calc_uv(double pressure, double min_pressure, double max_pressure) {
+  double u = ((pressure - min_pressure) / (max_pressure - min_pressure));
+  return clip(u, 0.0, 1.0);
+}
 
 class ContactGeometryToMarkers : public drake::geometry::ShapeReifier
 {
@@ -101,6 +114,11 @@ public:
       const drake::geometry::SurfaceMesh<double>& mesh_W = surface.mesh_W();
       face_msg.points.clear();
       face_msg.points.resize(mesh_W.num_faces() * 3);
+      face_msg.colors.clear();
+      face_msg.colors.resize(mesh_W.num_faces() * 3);
+
+      Eigen::VectorXd pressures;
+      pressures.resize(mesh_W.num_faces() * 3);
 
       // Make lines for the edges
       visualization_msgs::msg::Marker edge_msg;
@@ -125,6 +143,7 @@ public:
 
       // Generate the surface markers for each mesh.
       size_t index = 0;
+      const auto& field = surface.e_MN();
       for (drake::geometry::SurfaceFaceIndex j(0); j < mesh_W.num_faces(); ++j) {
         // Get the three vertices.
         const auto& face = mesh_W.element(j);
@@ -135,22 +154,11 @@ public:
         face_msg.points.at(index + 0) = tf2::toMsg(vA.r_MV());
         face_msg.points.at(index + 1) = tf2::toMsg(vB.r_MV());
         face_msg.points.at(index + 2) = tf2::toMsg(vC.r_MV());
-        index += 3;
 
-        /*
-        write_double3(vA.r_MV(), tri_msg.p_WA);
-        write_double3(vB.r_MV(), tri_msg.p_WB);
-        write_double3(vC.r_MV(), tri_msg.p_WC);
-        write_double3((vA.r_MV() + vB.r_MV() + vC.r_MV()) / 3.0, quad_msg.p_WQ);
-
-        tri_msg.pressure_A = field.EvaluateAtVertex(face.vertex(0));
-        tri_msg.pressure_B = field.EvaluateAtVertex(face.vertex(1));
-        tri_msg.pressure_C = field.EvaluateAtVertex(face.vertex(2));
-
-        // Face contact *traction* and *slip velocity* data.
-        write_double3(Vector3<double>(0, 0.2, 0), quad_msg.vt_BqAq_W);
-        write_double3(Vector3<double>(0, -0.2, 0), quad_msg.traction_Aq_W);
-        */
+        for (size_t vert_index = 0; vert_index < 3; vert_index++) {
+          pressures[index + vert_index] =
+            field.EvaluateAtVertex(face.vertex(vert_index));
+        }
 
         // 0->1
         edge_msg.points.push_back(tf2::toMsg(vA.r_MV()));
@@ -161,7 +169,33 @@ public:
         // 2->0
         edge_msg.points.push_back(tf2::toMsg(vC.r_MV()));
         edge_msg.points.push_back(tf2::toMsg(vA.r_MV()));
+
+        index += 3;
       }
+
+      // Color based on pressures.
+      for (size_t tri_index = 0; tri_index < (size_t)mesh_W.num_faces(); tri_index++) {
+        for (size_t vert_index = 0; vert_index < 3; vert_index++) {
+          size_t arr_index = (tri_index * 3) + vert_index;
+          double norm_data = calc_uv(pressures(arr_index), 0.0, pressures.maxCoeff());
+          std::cout << vert_index << ": " << norm_data << ", ";
+          face_msg.colors.at(arr_index).r = clip(((norm_data - 0.25) * 4.0), 0.0, 1.0);
+          face_msg.colors.at(arr_index).g = clip(((norm_data - 0.5) * 4.0), 0.0, 1.0);
+          if (norm_data < 0.25) {
+            face_msg.colors.at(arr_index).b = clip(norm_data * 4.0, 0.0, 1.0);
+          }
+          else if (norm_data > 0.75) {
+            face_msg.colors.at(arr_index).b = clip((norm_data - 0.75) * 4.0, 0.0, 1.0);
+          }
+          else {
+            face_msg.colors.at(arr_index).b = clip(1.0 - (norm_data - 0.25) * 4.0, 0.0, 1.0);
+          }
+
+          face_msg.colors.at(arr_index).a = 1.0f;
+        }
+        std::cout << std::endl;
+      }
+
 
       marker_array_->markers.push_back(face_msg);
 

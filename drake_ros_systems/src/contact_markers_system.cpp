@@ -196,9 +196,9 @@ public:
 
           double red, green, blue;
           create_color(norm_data, red, green, blue);
-          face_msg.colors.at(arr_index).r = red;
-          face_msg.colors.at(arr_index).g = green;
-          face_msg.colors.at(arr_index).b = blue;
+          face_msg.colors.at(arr_index).r = norm_data;
+          face_msg.colors.at(arr_index).g = norm_data;
+          face_msg.colors.at(arr_index).b = norm_data;
           face_msg.colors.at(arr_index).a = 1.0;
         }
       }

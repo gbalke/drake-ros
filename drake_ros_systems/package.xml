@@ -13,6 +13,7 @@
   <depend>rclcpp</depend>
   <depend>rosidl_runtime_c</depend>
   <depend>rosidl_typesupport_cpp</depend>
+  <depend>tf2_eigen</depend>
   <depend>tf2_ros</depend>
   <depend>visualization_msgs</depend>
 

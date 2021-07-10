@@ -27,7 +27,7 @@
 #include <rclcpp/time.hpp>
 
 #include <builtin_interfaces/msg/time.hpp>
-#include <tf2_eigen/tf2_eigen.h>
+#include <tf2_eigen/tf2_eigen.hpp>
 #include <geometry_msgs/msg/point_stamped.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
@@ -130,6 +130,8 @@ public:
       face_msg.points.resize(mesh_W.num_faces() * 3);
       face_msg.colors.clear();
       face_msg.colors.resize(mesh_W.num_faces() * 3);
+      face_msg.uv_coordinates.clear();
+      face_msg.uv_coordinates.resize(mesh_W.num_faces() * 3);
 
       Eigen::VectorXd pressures;
       pressures.resize(mesh_W.num_faces() * 3);
@@ -196,13 +198,16 @@ public:
 
           double red, green, blue;
           create_color(norm_data, red, green, blue);
-          face_msg.colors.at(arr_index).r = norm_data;
-          face_msg.colors.at(arr_index).g = norm_data;
-          face_msg.colors.at(arr_index).b = norm_data;
+          face_msg.colors.at(arr_index).r = 1.0;
+          face_msg.colors.at(arr_index).g = 1.0;
+          face_msg.colors.at(arr_index).b = 1.0;
           face_msg.colors.at(arr_index).a = 1.0;
+          face_msg.uv_coordinates.at(arr_index).u = norm_data;
+          face_msg.uv_coordinates.at(arr_index).v = 0;
         }
       }
-
+      face_msg.texture_map = "file:///tmp/texture.png";
+      face_msg.texture_update = false;
 
       marker_array_->markers.push_back(face_msg);
 

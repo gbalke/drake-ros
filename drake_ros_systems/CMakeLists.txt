@@ -19,6 +19,7 @@ find_package(rclcpp REQUIRED)
 find_package(rosidl_runtime_c REQUIRED)
 find_package(rosidl_typesupport_cpp REQUIRED)
 find_package(tf2_ros REQUIRED)
+find_package(tf2_eigen REQUIRED)
 find_package(visualization_msgs REQUIRED)
 
 add_library(drake_ros_systems
@@ -45,6 +46,7 @@ target_link_libraries(drake_ros_systems PUBLIC
     tf2_ros::tf2_ros
     ${geometry_msgs_TARGETS}
     ${visualization_msgs_TARGETS}
+    ${tf2_eigen_TARGETS}
 )
 
 target_include_directories(drake_ros_systems
@@ -53,6 +55,8 @@ target_include_directories(drake_ros_systems
     "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>"
     "$<INSTALL_INTERFACE:include>"
 )
+
+target_include_directories(drake_ros_systems PRIVATE ${tf2_eigen_INCLUDE_DIRS})
 
 ament_export_include_directories(include)
 ament_export_libraries(drake_ros_systems)
@@ -63,6 +67,7 @@ ament_export_dependencies(geometry_msgs)
 ament_export_dependencies(rclcpp)
 ament_export_dependencies(rosidl_generator_c)
 ament_export_dependencies(tf2_ros)
+ament_export_dependencies(tf2_eigen)
 ament_export_dependencies(visualization_msgs)
 
 install(TARGETS ${PROJECT_NAME} EXPORT ${PROJECT_NAME}

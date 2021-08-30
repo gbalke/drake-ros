@@ -27,25 +27,26 @@
 #include <rclcpp/time.hpp>
 
 #include <builtin_interfaces/msg/time.hpp>
-#include <tf2_eigen/tf2_eigen.hpp>
 #include <geometry_msgs/msg/point_stamped.hpp>
 #include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/transform_stamped.hpp>
+#include <tf2_eigen/tf2_eigen.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
 #include <Eigen/Core>
 
+#include <algorithm>
+#include <cmath>
 #include <unordered_set>
 #include <utility>
-#include <cmath>
 
 #include <iostream>
 
 #include "drake_ros_systems/contact_markers_system.hpp"
 #include "drake_ros_systems/utilities/name_conventions.hpp"
 #include "drake_ros_systems/utilities/type_conversion.hpp"
-
+#include "lodepng/lodepng.h"
 
 namespace drake_ros_systems
 {
@@ -53,38 +54,51 @@ namespace drake_ros_systems
 namespace
 {
 
-template <typename T>
-T clip(const T& n, const T& lower, const T& upper) {
-  return std::max(lower, std::min(n, upper));
-}
-
 double calc_uv(double pressure, double min_pressure, double max_pressure) {
   double u = ((pressure - min_pressure) / (max_pressure - min_pressure));
-  return clip(u, 0.0, 1.0);
+  return std::clamp(u, 0.0, 1.0);
 }
 
 void create_color(double value, double & red, double & green, double & blue) {
-  red = clip(((value - 0.25) * 4.0), 0.0, 1.0);
-  green = clip(((value - 0.5) * 4.0), 0.0, 1.0);
+  red = std::clamp(((value - 0.25) * 4.0), 0.0, 1.0);
+  green = std::clamp(((value - 0.5) * 4.0), 0.0, 1.0);
   if (value < 0.25) {
-    blue = clip(value * 4.0, 0.0, 1.0);
+    blue = std::clamp(value * 4.0, 0.0, 1.0);
   }
   else if (value > 0.75) {
-    blue = clip((value - 0.75) * 4.0, 0.0, 1.0);
+    blue = std::clamp((value - 0.75) * 4.0, 0.0, 1.0);
   }
   else {
-    blue = clip(1.0 - (value - 0.25) * 4.0, 0.0, 1.0);
+    blue = std::clamp(1.0 - (value - 0.25) * 4.0, 0.0, 1.0);
   }
 }
 
 class ContactGeometryToMarkers : public drake::geometry::ShapeReifier
 {
+private:
+  const size_t TEXTURE_SIZE = 1024;
+
+  const ContactMarkersParams & params_;
+  visualization_msgs::msg::MarkerArray * marker_array_{nullptr};
+  drake::math::RigidTransform<double> X_FG_{};
+  std::vector<uint8_t> texture_;
+
 public:
   DRAKE_NO_COPY_NO_MOVE_NO_ASSIGN(ContactGeometryToMarkers)
 
   explicit ContactGeometryToMarkers(const ContactMarkersParams & params)
   : params_(params)
   {
+    std::vector<uint8_t> image(TEXTURE_SIZE * 4);
+    double red, green, blue;
+    for (size_t i = 0; i < TEXTURE_SIZE; i++) {
+      create_color((double) i / TEXTURE_SIZE, red, green, blue);
+      image[(i*4) + 0] = (uint8_t)(red * 255.0);
+      image[(i*4) + 1] = (uint8_t)(green * 255.0);
+      image[(i*4) + 2] = (uint8_t)(blue * 255.0);
+      image[(i*4) + 3] = (uint8_t)(255);
+    }
+    lodepng::encode(texture_, image, TEXTURE_SIZE, 1);
   }
 
   ~ContactGeometryToMarkers() override = default;
@@ -196,8 +210,6 @@ public:
           double norm_data = calc_uv(
               pressures(arr_index), 0.0, pressures.maxCoeff());
 
-          double red, green, blue;
-          create_color(norm_data, red, green, blue);
           face_msg.colors.at(arr_index).r = 1.0;
           face_msg.colors.at(arr_index).g = 1.0;
           face_msg.colors.at(arr_index).b = 1.0;
@@ -206,20 +218,15 @@ public:
           face_msg.uv_coordinates.at(arr_index).v = 0;
         }
       }
-      face_msg.texture_map = "file:///tmp/texture.png";
-      face_msg.texture_update = false;
+
+      face_msg.texture.data = texture_;
+      face_msg.texture_resource = "embedded://heat_map.png";
+      face_msg.texture.format = "png";
 
       marker_array_->markers.push_back(face_msg);
-
       marker_array_->markers.push_back(edge_msg);
     }
   }
-
-private:
-
-  const ContactMarkersParams & params_;
-  visualization_msgs::msg::MarkerArray * marker_array_{nullptr};
-  drake::math::RigidTransform<double> X_FG_{};
 };
 
 }  // namespace

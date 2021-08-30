@@ -34,6 +34,7 @@ add_library(drake_ros_systems
   src/scene_tf_system.cpp
   src/subscription.cpp
   src/scene_tf_broadcaster_system.cpp
+  src/lodepng/lodepng.cpp
   src/utilities/name_conventions.cpp
   src/utilities/type_conversion.cpp
 )
